@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+    parameters {
+        choice(
+            name: 'Environment',
+            choices: ['main', 'dev', 'qa'],
+            description: 'Please Select env'
+        )
+    }
+    tools {
+        nodejs "node"
+    }
+     environment {
+        GIT_URL = "https://github.com/choudharyjayant/php.git"
+         Zip_Name = "${BUILD_NUMBER}.zip"
+         Application_name = "${params.Environment}-${JOB_NAME}"
+         DeploymentGroup_Name = "DG-${params.Environment}-${JOB_NAME}"
+         bucket_name = "${params.Environment}-${JOB_NAME}"
+     }
+    stages {
+        stage('Clone Repository') {
+            steps {
+                //git branch: 'main', credentialsId: 'git-cred', url: 'https://github.com/choudharyjayant/php.git'
+                git credentialsId: 'git-cred', url: 'https://github.com/choudharyjayant/simple-php-website.git'
+                }
+        }
+        
+        
+         stage('Build') {
+            steps {
+                sh ''' #! /bin/bash
+                php --version
+                sudo php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+                sonar-scanner -Dsonar.organization=jenkins-prefav -Dsonar.projectKey=sonar-php -Dsonar.sources=. -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=#//b33b3706a70cdbb32d306c4ec489ff4d1a150437
+                '''
+            }
+        }
+        
+		stage ('Artifact') {
+            steps {
+                withCredentials([[ $class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-cred-2', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                sh "echo this is ${env.AWS_ACCESS_KEY_ID}"
+                sh "echo this is ${env.AWS_SECRET_ACCESS_KEY}"
+                sh """ #! /bin/bash
+                cd /var/lib/jenkins/workspace/${env.JOB_NAME}/   
+                sudo zip -r ${env.Zip_Name} appspec.yml Dependency_Scripts php_demo/ 
+                ls
+                
+        		#To push zip folder to s3 
+                aws s3 cp ${env.Zip_Name}  s3://${env.bucket_name}/
+                """
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                withCredentials([[ $class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-cred-2', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                sh "echo this is ${env.AWS_ACCESS_KEY_ID}"
+                sh "echo this is ${env.AWS_SECRET_ACCESS_KEY}"
+                sh """ #! /bin/bash
+		        #to deploy on aws from s3 bucket
+                aws deploy create-deployment --application-name ${env.Application_name} --deployment-group-name ${env.DeploymentGroup_Name} --deployment-config-name CodeDeployDefault.AllAtOnce --s3-location bucket=${bucket_name},bundleType=zip,key=${env.Zip_Name}    
+                #echo Deployment Successfull
+                """
+                }
+            }
+        }
+    }
+    post {
+        always {
+            echo 'Stage is success'
+        }
+    }
+}
