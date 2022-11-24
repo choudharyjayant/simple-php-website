@@ -1,0 +1,17 @@
+version: 0.0
+os: linux 
+
+files:
+  - source: /
+    destination: /home/ubuntu/php/
+    
+hooks:
+  BeforeInstall:
+    - location: Dependency_Scripts/rmBeforeInstall.sh
+      timeout: 300
+      runas: ubuntu
+
+  ApplicationStart:
+    - location: Dependency_Scripts/startApplication.sh
+      timeout: 300
+      runas: ubuntu
