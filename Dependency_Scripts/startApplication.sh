@@ -1,4 +1,4 @@
 #!/bin/bash
-cd /home/ubuntu/php/
+cd /home/ubuntu/simple-php-website/
 composer install
-nohup php -S 0.0.0.0:8081 -t web/ > /dev/null 2>&1 &
+nohup php -S 0.0.0.0:8081 -t /home/ubuntu/simple-php-website/ > /dev/null 2>&1 &
