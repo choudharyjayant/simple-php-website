@@ -16,6 +16,10 @@ pipeline {
          Application_name = "${params.Environment}-${JOB_NAME}"
          DeploymentGroup_Name = "DG-${params.Environment}-${JOB_NAME}"
          bucket_name = "${params.Environment}-${JOB_NAME}"
+         SONAR_TOKEN = credentials('SONAR_TOKEN_PHP')
+         HOST_URL = "https://sonarcloud.io"
+         PROJECT_KEY = "sonar-php"
+         ORGANIZATION = "jenkins-prefav"
      }
     stages {
         stage('Clone Repository') {
@@ -31,7 +35,8 @@ pipeline {
                 sh ''' #! /bin/bash
                 php --version
                 sudo php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
-                sonar-scanner -Dsonar.organization=jenkins-prefav -Dsonar.projectKey=sonar-php -Dsonar.sources=. -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=#//b33b3706a70cdbb32d306c4ec489ff4d1a150437
+                sonar-scanner -Dsonar.organization=$ORGANIZATION -Dsonar.projectKey=$PROJECT_KEY -Dsonar.sources=. -Dsonar.host.url=$HOST_URL -Dsonar.login=$SONAR_TOKEN
+            #b33b3706a70cdbb32d306c4ec489ff4d1a150437
                 '''
             }
         }
